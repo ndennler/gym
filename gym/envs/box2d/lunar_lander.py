@@ -169,8 +169,9 @@ class LunarLander(gym.Env, EzPickle):
         self.moon.color2 = (0.0, 0.0, 0.0)
 
         initial_y = VIEWPORT_H/SCALE
+        initial_x = self.np_random.uniform(3*VIEWPORT_W/SCALE/8, 5*VIEWPORT_W/SCALE/8)
         self.lander = self.world.CreateDynamicBody(
-            position=(VIEWPORT_W/SCALE/2, initial_y),
+            position=(initial_x, initial_y),
             angle=0.0,
             fixtures = fixtureDef(
                 shape=polygonShape(vertices=[(x/SCALE, y/SCALE) for x, y in LANDER_POLY]),
