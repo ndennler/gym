@@ -35,6 +35,7 @@ from Box2D.b2 import (edgeShape, circleShape, fixtureDef, polygonShape, revolute
 import gym
 from gym import spaces
 from gym.utils import seeding, EzPickle
+from gym.wrappers import Monitor
 
 FPS = 50
 SCALE = 30.0   # affects how fast-paced the game is, forces should be adjusted as well
@@ -42,7 +43,7 @@ SCALE = 30.0   # affects how fast-paced the game is, forces should be adjusted a
 MAIN_ENGINE_POWER = 13.0
 SIDE_ENGINE_POWER = 0.6
 
-INITIAL_RANDOM = 1500.0   # Set 1500 to make game harder
+INITIAL_RANDOM = 1000.0   # Set 1500 to make game harder
 
 LANDER_POLY =[
     (-14, +17), (-17, 0), (-17 ,-10),
@@ -95,7 +96,11 @@ class LunarLander(gym.Env, EzPickle):
         self.moon = None
         self.lander = None
         self.particles = []
-        self.terrain_y_values = self.np_random.uniform(0, 400/60, size=(12,) )
+        self.terrain_y_values = np.array([8.2805,  4.7387,  6.4994,  6.6547,  3.3333,  3.3333,  3.3333,  2.2976,
+          6.0295,  7.0200,  5.5859]) # self.np_random.uniform(0, 400/60, size=(12,) )
+        self.goal_x = len(self.terrain_y_values)//2
+        self.lander_initial_x = VIEWPORT_W/SCALE/2
+
 
         self.prev_reward = None
 
@@ -119,6 +124,13 @@ class LunarLander(gym.Env, EzPickle):
     
     def load_terrain(self, y_values):
         self.terrain_y_values = y_values
+    
+    def set_helipad(self, goal_x):
+        self.goal_x = goal_x
+    
+    def set_initial_x(self, x):
+        self.lander_initial_x = x
+
 
     def _destroy(self):
         if not self.moon: return
@@ -142,23 +154,27 @@ class LunarLander(gym.Env, EzPickle):
         H = VIEWPORT_H/SCALE
 
         # terrain
-        CHUNKS = len(self.terrain_y_values)
+        CHUNKS = len(self.terrain_y_values) - 1
         height = self.terrain_y_values
         chunk_x = [W/(CHUNKS-1)*i for i in range(CHUNKS)]
-        self.helipad_x1 = chunk_x[CHUNKS//2-1]
-        self.helipad_x2 = chunk_x[CHUNKS//2+1]
+
+        self.helipad_x1 = chunk_x[self.goal_x-1]
+        self.helipad_x2 = chunk_x[self.goal_x+1]
         self.helipad_y = H/4
 
-        height[CHUNKS//2-1] = self.helipad_y
-        height[CHUNKS//2] = self.helipad_y
-        height[CHUNKS//2+1] = self.helipad_y
+        height[self.goal_x-2] = self.helipad_y
+        height[self.goal_x-1] = self.helipad_y
+        height[self.goal_x+0] = self.helipad_y
+        height[self.goal_x+1] = self.helipad_y
+        height[self.goal_x+2] = self.helipad_y
 
+        smooth_y = [0.33*(height[i-1] + height[i+0] + height[i+1]) for i in range(CHUNKS)]
 
         self.moon = self.world.CreateStaticBody(shapes=edgeShape(vertices=[(0, 0), (W, 0)]))
         self.sky_polys = []
         for i in range(CHUNKS-1):
-            p1 = (chunk_x[i], height[i])
-            p2 = (chunk_x[i+1], height[i+1])
+            p1 = (chunk_x[i], smooth_y[i])
+            p2 = (chunk_x[i+1], smooth_y[i+1])
             self.moon.CreateEdgeFixture(
                 vertices=[p1,p2],
                 density=0,
@@ -169,9 +185,9 @@ class LunarLander(gym.Env, EzPickle):
         self.moon.color2 = (0.0, 0.0, 0.0)
 
         initial_y = VIEWPORT_H/SCALE
-        initial_x = self.np_random.uniform(3*VIEWPORT_W/SCALE/8, 5*VIEWPORT_W/SCALE/8)
+        print("initial_x", self.lander_initial_x)
         self.lander = self.world.CreateDynamicBody(
-            position=(initial_x, initial_y),
+            position=(self.lander_initial_x, initial_y),
             angle=0.0,
             fixtures = fixtureDef(
                 shape=polygonShape(vertices=[(x/SCALE, y/SCALE) for x, y in LANDER_POLY]),
@@ -191,7 +207,7 @@ class LunarLander(gym.Env, EzPickle):
         self.legs = []
         for i in [-1, +1]:
             leg = self.world.CreateDynamicBody(
-                position=(VIEWPORT_W/SCALE/2 - i*LEG_AWAY/SCALE, initial_y),
+                position=(self.lander_initial_x - i*LEG_AWAY/SCALE, initial_y),
                 angle=(i * 0.05),
                 fixtures=fixtureDef(
                     shape=polygonShape(box=(LEG_W/SCALE, LEG_H/SCALE)),
@@ -431,11 +447,19 @@ def heuristic(env, s):
         elif angle_todo > +0.05: a = 1
     return a
 
+def wrap_env(env, log_dir):
+  env = Monitor(env, log_dir, force=True)
+  return env
+  
 def demo_heuristic_lander(env, seed=None, render=False):
     env.seed(seed)
+    env = wrap_env(gym.make("LunarLander-v2"), './video')
     total_reward = 0
     steps = 0
+    env.set_initial_x(18)
     s = env.reset()
+    
+
     while True:
         a = heuristic(env, s)
         s, r, done, info = env.step(a)
@@ -450,7 +474,10 @@ def demo_heuristic_lander(env, seed=None, render=False):
             print("step {} total_reward {:+0.2f}".format(steps, total_reward))
         steps += 1
         if done: break
+        
+    env.close()
     return total_reward
+
 
 
 if __name__ == '__main__':
