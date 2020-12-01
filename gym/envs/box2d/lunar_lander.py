@@ -162,19 +162,15 @@ class LunarLander(gym.Env, EzPickle):
         self.helipad_x2 = chunk_x[self.goal_x+1]
         self.helipad_y = H/4
 
-        height[self.goal_x-2] = self.helipad_y
-        height[self.goal_x-1] = self.helipad_y
-        height[self.goal_x+0] = self.helipad_y
-        height[self.goal_x+1] = self.helipad_y
-        height[self.goal_x+2] = self.helipad_y
+        
 
-        smooth_y = [0.33*(height[i-1] + height[i+0] + height[i+1]) for i in range(CHUNKS)]
+        # smooth_y = [0.33*(height[i-1] + height[i+0] + height[i+1]) for i in range(CHUNKS)]
 
         self.moon = self.world.CreateStaticBody(shapes=edgeShape(vertices=[(0, 0), (W, 0)]))
         self.sky_polys = []
         for i in range(CHUNKS-1):
-            p1 = (chunk_x[i], smooth_y[i])
-            p2 = (chunk_x[i+1], smooth_y[i+1])
+            p1 = (chunk_x[i], height[i])
+            p2 = (chunk_x[i+1], height[i+1])
             self.moon.CreateEdgeFixture(
                 vertices=[p1,p2],
                 density=0,
