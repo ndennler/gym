@@ -158,11 +158,6 @@ class LunarLander(gym.Env, EzPickle):
         height = self.terrain_y_values
         chunk_x = [W/(CHUNKS-1)*i for i in range(CHUNKS)]
 
-        print(CHUNKS)
-        print(height)
-        print(chunk_x)
-
-
         self.helipad_x1 = chunk_x[self.goal_x-1]
         self.helipad_x2 = chunk_x[self.goal_x+1]
         self.helipad_y = H/4
