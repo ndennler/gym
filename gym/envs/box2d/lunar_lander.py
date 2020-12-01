@@ -154,17 +154,18 @@ class LunarLander(gym.Env, EzPickle):
         H = VIEWPORT_H/SCALE
 
         # terrain
-        CHUNKS = len(self.terrain_y_values) - 1
+        CHUNKS = len(self.terrain_y_values)
         height = self.terrain_y_values
         chunk_x = [W/(CHUNKS-1)*i for i in range(CHUNKS)]
+
+        print(CHUNKS)
+        print(height)
+        print(chunk_x)
+
 
         self.helipad_x1 = chunk_x[self.goal_x-1]
         self.helipad_x2 = chunk_x[self.goal_x+1]
         self.helipad_y = H/4
-
-        
-
-        # smooth_y = [0.33*(height[i-1] + height[i+0] + height[i+1]) for i in range(CHUNKS)]
 
         self.moon = self.world.CreateStaticBody(shapes=edgeShape(vertices=[(0, 0), (W, 0)]))
         self.sky_polys = []
@@ -181,7 +182,8 @@ class LunarLander(gym.Env, EzPickle):
         self.moon.color2 = (0.0, 0.0, 0.0)
 
         initial_y = VIEWPORT_H/SCALE
-        print("initial_x", self.lander_initial_x)
+        # print("initial_x", self.lander_initial_x)
+
         self.lander = self.world.CreateDynamicBody(
             position=(self.lander_initial_x, initial_y),
             angle=0.0,
